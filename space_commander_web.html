@@ -1,0 +1,1748 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Space Commander 3 - Mobile</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: #0a1428;
+            overflow: hidden;
+            width: 100vw;
+            height: 100vh;
+            position: fixed;
+        }
+
+        #gameContainer {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            background: linear-gradient(180deg, #0a1428 0%, #1a2538 100%);
+        }
+
+        canvas {
+            display: block;
+            touch-action: none;
+        }
+
+        .header {
+            background: rgba(20, 30, 50, 0.95);
+            padding: 8px 15px;
+            border-bottom: 3px solid #00c8ff;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            min-height: 90px;
+            position: relative;
+            z-index: 100;
+        }
+
+        .resource-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .resource-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 16px;
+            color: #c8e6ff;
+        }
+
+        .resource-icon {
+            font-size: 20px;
+            min-width: 24px;
+        }
+
+        .resource-value {
+            font-weight: bold;
+            min-width: 60px;
+        }
+
+        .system-panel {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 5px;
+        }
+
+        .system-name {
+            color: #ffc800;
+            font-size: 16px;
+            font-weight: bold;
+        }
+
+        .system-icon {
+            font-size: 24px;
+        }
+
+        .footer {
+            background: rgba(20, 30, 50, 0.95);
+            padding: 10px 15px;
+            border-top: 3px solid #00c8ff;
+            min-height: 60px;
+            display: flex;
+            align-items: center;
+            color: #c8e6ff;
+            font-size: 13px;
+            overflow: hidden;
+        }
+
+        .main-view {
+            flex: 1;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .button-bar {
+            position: absolute;
+            bottom: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 15px;
+            z-index: 50;
+        }
+
+        .icon-button {
+            width: 60px;
+            height: 60px;
+            border-radius: 10px;
+            background: linear-gradient(135deg, #1e3a5f 0%, #2a4a6f 100%);
+            border: 3px solid #00c8ff;
+            color: white;
+            font-size: 28px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+        }
+
+        .icon-button:active {
+            transform: scale(0.95);
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.5);
+        }
+
+        .icon-button.danger {
+            background: linear-gradient(135deg, #7f1020 0%, #9f2030 100%);
+            border-color: #ff3250;
+        }
+
+        .modal {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(20, 30, 50, 0.98);
+            border: 3px solid #00c8ff;
+            border-radius: 12px;
+            padding: 20px;
+            max-width: 90%;
+            max-height: 80%;
+            overflow-y: auto;
+            z-index: 200;
+            display: none;
+        }
+
+        .modal.active {
+            display: block;
+        }
+
+        .modal-header {
+            font-size: 24px;
+            color: #ffc800;
+            margin-bottom: 15px;
+            text-align: center;
+            font-weight: bold;
+        }
+
+        .modal-content {
+            color: #c8e6ff;
+        }
+
+        .button {
+            width: 100%;
+            padding: 15px;
+            margin: 8px 0;
+            background: linear-gradient(135deg, #1e3a5f 0%, #2a4a6f 100%);
+            border: 2px solid #00c8ff;
+            border-radius: 8px;
+            color: #c8e6ff;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .button:active {
+            transform: scale(0.98);
+        }
+
+        .button.success {
+            background: linear-gradient(135deg, #0a5f20 0%, #0f7f30 100%);
+            border-color: #00ff64;
+        }
+
+        .button.danger {
+            background: linear-gradient(135deg, #7f1020 0%, #9f2030 100%);
+            border-color: #ff3250;
+        }
+
+        .button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .info-card {
+            background: rgba(30, 40, 60, 0.8);
+            border: 2px solid #00c8ff;
+            border-radius: 10px;
+            padding: 15px;
+            margin: 10px 0;
+        }
+
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(200, 230, 255, 0.2);
+        }
+
+        .info-row:last-child {
+            border-bottom: none;
+        }
+
+        .info-label {
+            color: #8ab4d9;
+            font-size: 14px;
+        }
+
+        .info-value {
+            color: #c8e6ff;
+            font-weight: bold;
+            font-size: 14px;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 20px;
+            background: #282828;
+            border: 2px solid white;
+            border-radius: 4px;
+            overflow: hidden;
+            margin: 8px 0;
+        }
+
+        .progress-fill {
+            height: 100%;
+            transition: width 0.3s;
+        }
+
+        .status-text {
+            text-align: center;
+            color: #ffc800;
+            font-size: 16px;
+            margin: 10px 0;
+            font-weight: bold;
+        }
+
+        .tech-item {
+            background: rgba(30, 40, 60, 0.9);
+            border: 2px solid #00c8ff;
+            border-radius: 8px;
+            padding: 12px;
+            margin: 10px 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .tech-info {
+            flex: 1;
+        }
+
+        .tech-name {
+            color: #c8e6ff;
+            font-size: 16px;
+            font-weight: bold;
+        }
+
+        .tech-level {
+            color: #00ff64;
+            font-size: 14px;
+        }
+
+        .tech-button {
+            width: 100px;
+            padding: 10px;
+            background: linear-gradient(135deg, #0a5f20 0%, #0f7f30 100%);
+            border: 2px solid #00ff64;
+            border-radius: 6px;
+            color: white;
+            font-size: 14px;
+            cursor: pointer;
+        }
+
+        .tech-button:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+
+        .ship-icon-large {
+            font-size: 64px;
+            text-align: center;
+            margin: 20px 0;
+        }
+
+        .planet-icon-large {
+            font-size: 80px;
+            text-align: center;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div id="gameContainer">
+        <div class="header">
+            <div class="resource-panel">
+                <div class="resource-item">
+                    <span class="resource-icon">💰</span>
+                    <span class="resource-value" id="resources">1000</span>
+                </div>
+                <div class="resource-item">
+                    <span class="resource-icon">⚡</span>
+                    <span class="resource-value" id="deuterium">500</span>
+                </div>
+                <div class="resource-item">
+                    <span class="resource-icon">🚀</span>
+                    <span class="resource-value" id="shipCount">4</span>
+                </div>
+            </div>
+            <div class="system-panel">
+                <div class="system-icon">⭐</div>
+                <div class="system-name" id="systemName">Sol</div>
+            </div>
+        </div>
+
+        <div class="main-view">
+            <canvas id="gameCanvas"></canvas>
+            <div class="button-bar" id="buttonBar">
+                <button class="icon-button" id="galaxyBtn">🌌</button>
+                <button class="icon-button" id="techBtn">🔬</button>
+                <button class="icon-button danger" id="quitBtn">✕</button>
+            </div>
+        </div>
+
+        <div class="footer" id="logDisplay">
+            Welcome Commander! Starting from Sol System 🚀
+        </div>
+
+        <!-- Ship Menu Modal -->
+        <div class="modal" id="shipModal">
+            <div class="modal-header" id="shipModalTitle">Ship Details</div>
+            <div class="modal-content">
+                <div class="ship-icon-large" id="shipIcon">◊</div>
+                <div class="info-card">
+                    <div class="info-row">
+                        <span class="info-label">Name</span>
+                        <span class="info-value" id="shipName">-</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Type</span>
+                        <span class="info-value" id="shipType">-</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Health</span>
+                        <span class="info-value" id="shipHealth">100/100</span>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="shipHealthBar" style="width: 100%; background: #00ff64;"></div>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Fuel</span>
+                        <span class="info-value" id="shipFuel">100/100</span>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="shipFuelBar" style="width: 100%; background: #00c8ff;"></div>
+                    </div>
+                </div>
+                <div id="shipStatus"></div>
+                <div id="shipActions"></div>
+                <button class="button" id="closeShipModal">⬅ Back to Map</button>
+            </div>
+        </div>
+
+        <!-- Planet Menu Modal -->
+        <div class="modal" id="planetModal">
+            <div class="modal-header" id="planetModalTitle">Planet Details</div>
+            <div class="modal-content">
+                <div class="planet-icon-large" id="planetIcon">●</div>
+                <div class="status-text" id="planetStatus">Unknown</div>
+                <div class="info-card" id="planetInfo"></div>
+                <div id="planetActions"></div>
+                <button class="button" id="closePlanetModal">⬅ Back to Map</button>
+            </div>
+        </div>
+
+        <!-- Galaxy View Modal -->
+        <div class="modal" id="galaxyModal">
+            <div class="modal-header">🌌 Galaxy Map</div>
+            <div class="modal-content">
+                <canvas id="galaxyCanvas" width="640" height="800"></canvas>
+                <button class="button" id="closeGalaxyModal">⬅ Back to Map</button>
+            </div>
+        </div>
+
+        <!-- Tech View Modal -->
+        <div class="modal" id="techModal">
+            <div class="modal-header">🔬 Research</div>
+            <div class="modal-content" id="techList"></div>
+            <button class="button" id="closeTechModal">⬅ Back to Map</button>
+        </div>
+    </div>
+
+    <script>
+        // ==================== GAME STATE ====================
+        
+        const ShipType = {
+            SCOUT: 'Scout',
+            FIGHTER: 'Fighter',
+            DESTROYER: 'Destroyer',
+            COLONY: 'Colony',
+            SCIENCE: 'Science',
+            CARGO: 'Cargo',
+            MINER: 'Miner',
+            CAPITAL: 'Capital'
+        };
+
+        const TechType = {
+            WEAPONS: 'Weapons',
+            SHIELDS: 'Shields',
+            ENGINES: 'Engines',
+            SCANNERS: 'Scanners',
+            HYPERDRIVE: 'Hyperdrive',
+            MINING: 'Mining',
+            TELEPORT: 'Teleport'
+        };
+
+        class GameState {
+            constructor() {
+                this.playerName = 'Commander';
+                this.resources = 1000;
+                this.deuterium = 500;
+                
+                this.tech = {
+                    weapons: 1,
+                    shields: 0,
+                    engines: 1,
+                    scanners: 1,
+                    hyperdrive: 1,
+                    mining: 1,
+                    teleport: 0
+                };
+                
+                this.starSystems = {};
+                this.planets = {};
+                this.ships = {};
+                this.enemies = {};
+                
+                this.currentSystem = 'sys_0';
+                this.selectedShipId = null;
+                this.selectedPlanetId = null;
+                
+                this.log = [];
+                this.lastUpdateTime = Date.now();
+                
+                this.initializeGame();
+            }
+            
+            initializeGame() {
+                // Create 3 starting systems
+                const systems = [
+                    { name: 'Sol', pos: [500, 500], discovered: true },
+                    { name: 'Alpha Centauri', pos: [300, 700], discovered: false },
+                    { name: 'Sirius', pos: [700, 300], discovered: false }
+                ];
+                
+                let planetId = 0;
+                
+                systems.forEach((sysData, sysIdx) => {
+                    const system = {
+                        id: `sys_${sysIdx}`,
+                        name: sysData.name,
+                        position: sysData.pos,
+                        discovered: sysData.discovered,
+                        planets: [],
+                        starColor: [255, 255, 200]
+                    };
+                    
+                    this.starSystems[system.id] = system;
+                    
+                    // Create 9 planets per system
+                    for (let p = 0; p < 9; p++) {
+                        const angle = (p * 40) * Math.PI / 180;
+                        const distance = 150 + (p * 50);
+                        const px = 400 + distance * Math.cos(angle);
+                        const py = 400 + distance * Math.sin(angle);
+                        
+                        const planet = {
+                            id: `planet_${planetId}`,
+                            name: `${sysData.name} ${String.fromCharCode(65 + p)}`,
+                            system: system.id,
+                            position: [px, py],
+                            radius: 15 + (p % 3) * 5,
+                            colonized: (sysIdx === 0 && p === 0),
+                            scanned: (sysIdx === 0),
+                            visitedByColonyShip: (sysIdx === 0 && p === 0),
+                            population: (sysIdx === 0 && p === 0) ? 1000000 : 0,
+                            resources: 50 + (p * 20),
+                            deuterium: 30 + (p * 15),
+                            miningStations: 0,
+                            defenses: 0
+                        };
+                        
+                        this.planets[planet.id] = planet;
+                        system.planets.push(planet.id);
+                        planetId++;
+                    }
+                });
+                
+                // Create starting fleet
+                const startingShips = [
+                    { name: 'Enterprise', type: ShipType.SCOUT, pos: [300, 300] },
+                    { name: 'Defender', type: ShipType.FIGHTER, pos: [320, 320] },
+                    { name: 'Pioneer', type: ShipType.COLONY, pos: [280, 280] },
+                    { name: 'Discovery', type: ShipType.SCIENCE, pos: [340, 340] }
+                ];
+                
+                startingShips.forEach((shipData, idx) => {
+                    const ship = {
+                        id: `ship_${idx}`,
+                        name: shipData.name,
+                        shipType: shipData.type,
+                        system: 'sys_0',
+                        position: shipData.pos,
+                        health: 100,
+                        maxHealth: 100,
+                        fuel: 100,
+                        maxFuel: 100,
+                        targetSystem: null,
+                        travelProgress: 0,
+                        travelStartTime: null,
+                        travelDuration: 0,
+                        scanningTarget: null,
+                        scanProgress: 0,
+                        scanStartTime: null,
+                        miningTarget: null,
+                        miningProgress: 0,
+                        combatTarget: null
+                    };
+                    
+                    this.ships[ship.id] = ship;
+                });
+                
+                this.addLog('Welcome Commander!');
+                this.addLog('🚀 Starting from Sol System');
+                this.addLog('📡 4 ships ready');
+            }
+            
+            addLog(message) {
+                const timestamp = new Date().toLocaleTimeString();
+                this.log.push(`[${timestamp}] ${message}`);
+                if (this.log.length > 100) {
+                    this.log = this.log.slice(-100);
+                }
+            }
+            
+            getTechCost(techName) {
+                const currentLevel = this.tech[techName.toLowerCase()];
+                const baseCost = 200;
+                return Math.floor(baseCost * Math.pow(1.5, currentLevel));
+            }
+        }
+
+        // ==================== GAME LOGIC ====================
+        
+        function updateGameState(game, dt) {
+            const currentTime = Date.now();
+            
+            // Update ships
+            Object.values(game.ships).forEach(ship => {
+                // Travel updates
+                if (ship.targetSystem !== null && ship.travelStartTime !== null) {
+                    const elapsed = (currentTime - ship.travelStartTime) / 1000;
+                    ship.travelProgress = Math.min(1.0, elapsed / ship.travelDuration);
+                    
+                    if (ship.travelProgress >= 1.0) {
+                        ship.system = ship.targetSystem;
+                        ship.targetSystem = null;
+                        ship.travelStartTime = null;
+                        ship.travelProgress = 0;
+                        ship.position = [400, 400];
+                        game.addLog(`✓ ${ship.name} arrived`);
+                        
+                        if (!game.starSystems[ship.system].discovered) {
+                            game.starSystems[ship.system].discovered = true;
+                            game.addLog('⭐ New system discovered!');
+                        }
+                        
+                        if (canColonize(ship)) {
+                            checkColonyShipAtPlanets(game, ship);
+                        }
+                    }
+                }
+                
+                // Scanning updates
+                if (ship.scanningTarget !== null && ship.scanStartTime !== null) {
+                    const elapsed = (currentTime - ship.scanStartTime) / 1000;
+                    const scanDuration = 10.0 / (1 + game.tech.scanners * 0.1);
+                    ship.scanProgress = Math.min(1.0, elapsed / scanDuration);
+                    
+                    if (ship.scanProgress >= 1.0) {
+                        const planet = game.planets[ship.scanningTarget];
+                        planet.scanned = true;
+                        ship.scanningTarget = null;
+                        ship.scanStartTime = null;
+                        ship.scanProgress = 0;
+                        game.addLog(`📡 ${planet.name} scanned`);
+                    }
+                }
+                
+                // Planet travel updates
+                if (ship.targetPlanet !== null) {
+                    const targetPlanet = game.planets[ship.targetPlanet];
+                    if (targetPlanet && targetPlanet.system === ship.system) {
+                        const dx = targetPlanet.position[0] - ship.position[0];
+                        const dy = targetPlanet.position[1] - ship.position[1];
+                        const distance = Math.sqrt(dx * dx + dy * dy);
+                        
+                        if (distance > 50) {
+                            // Move towards planet
+                            const speed = 100 * (1 + game.tech.engines * 0.1); // pixels per second
+                            const moveDistance = speed * dt;
+                            const ratio = Math.min(moveDistance / distance, 1);
+                            
+                            ship.position[0] += dx * ratio;
+                            ship.position[1] += dy * ratio;
+                            ship.planetTravelProgress = 1 - (distance / 800);
+                        } else {
+                            // Arrived at planet
+                            ship.orbitingPlanet = ship.targetPlanet;
+                            ship.targetPlanet = null;
+                            ship.planetTravelProgress = 0;
+                            ship.position = [targetPlanet.position[0] + 40, targetPlanet.position[1]];
+                            game.addLog(`🛸 ${ship.name} orbiting ${targetPlanet.name}`);
+                            
+                            // Check if colony ship visiting
+                            if (canColonize(ship) && !targetPlanet.colonized && !targetPlanet.visitedByColonyShip) {
+                                targetPlanet.visitedByColonyShip = true;
+                                game.addLog(`🚀 ${targetPlanet.name} ready to colonize!`);
+                            }
+                        }
+                    } else {
+                        ship.targetPlanet = null;
+                    }
+                }
+                
+                // Mining updates
+                if (ship.miningTarget !== null) {
+                    ship.miningProgress += dt * (1 + game.tech.mining * 0.1);
+                    if (ship.miningProgress >= 100) {
+                        const planet = game.planets[ship.miningTarget];
+                        if (planet && planet.resources > 0) {
+                            const amount = 10 + game.tech.mining * 2;
+                            game.resources += amount;
+                            planet.resources = Math.max(0, planet.resources - amount);
+                            ship.miningProgress = 0;
+                            game.addLog(`⛏ +${amount} resources`);
+                        }
+                    }
+                }
+                
+                // Combat updates
+                if (ship.combatTarget !== null) {
+                    const enemy = game.enemies[ship.combatTarget];
+                    if (enemy && enemy.system === ship.system) {
+                        if (ship.health > 0 && enemy.health > 0) {
+                            const damageToEnemy = Math.max(1, (5 + game.tech.weapons * 2) - enemy.shields);
+                            enemy.health -= damageToEnemy * dt;
+                            
+                            const damageToShip = Math.max(1, enemy.weapons - game.tech.shields);
+                            ship.health -= damageToShip * dt;
+                            
+                            if (enemy.health <= 0) {
+                                game.addLog('⚔ Enemy destroyed!');
+                                delete game.enemies[enemy.id];
+                                ship.combatTarget = null;
+                                game.resources += 100;
+                            } else if (ship.health <= 0) {
+                                game.addLog(`💥 ${ship.name} destroyed!`);
+                                delete game.ships[ship.id];
+                            }
+                        }
+                    } else {
+                        ship.combatTarget = null;
+                    }
+                }
+            });
+            
+            // Resource generation
+            Object.values(game.planets).forEach(planet => {
+                if (planet.colonized && planet.population > 0) {
+                    const resGen = (planet.population / 100000) + (planet.miningStations * 5);
+                    game.resources += resGen * dt / 60;
+                }
+                
+                // System scanning from planets
+                if (planet.scanningForSystems && planet.systemScanStartTime !== null) {
+                    const elapsed = (currentTime - planet.systemScanStartTime) / 1000;
+                    const scanDuration = 30.0 / (1 + game.tech.scanners * 0.2);
+                    planet.systemScanProgress = Math.min(1.0, elapsed / scanDuration);
+                    
+                    if (planet.systemScanProgress >= 1.0) {
+                        // Find undiscovered systems
+                        const undiscovered = Object.values(game.starSystems).filter(s => !s.discovered);
+                        if (undiscovered.length > 0) {
+                            const newSystem = undiscovered[0];
+                            newSystem.discovered = true;
+                            game.addLog(`🌟 Discovered ${newSystem.name} system!`);
+                        } else {
+                            game.addLog(`📡 No new systems found`);
+                        }
+                        planet.scanningForSystems = false;
+                        planet.systemScanProgress = 0;
+                        planet.systemScanStartTime = null;
+                    }
+                }
+            });
+        }
+        
+        function checkColonyShipAtPlanets(game, colonyShip) {
+            const system = game.starSystems[colonyShip.system];
+            system.planets.forEach(planetId => {
+                const planet = game.planets[planetId];
+                if (!planet.colonized) {
+                    const dx = planet.position[0] - colonyShip.position[0];
+                    const dy = planet.position[1] - colonyShip.position[1];
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+                    
+                    if (distance < 100 && !planet.visitedByColonyShip) {
+                        planet.visitedByColonyShip = true;
+                        game.addLog(`🚀 ${planet.name} ready to colonize!`);
+                    }
+                }
+            });
+        }
+        
+        function calculateTravelTime(game, fromSystem, toSystem) {
+            const sys1 = game.starSystems[fromSystem];
+            const sys2 = game.starSystems[toSystem];
+            
+            const dx = sys2.position[0] - sys1.position[0];
+            const dy = sys2.position[1] - sys1.position[1];
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            
+            const baseTime = Math.min(distance * 0.2, 120);
+            const timeReduction = game.tech.hyperdrive * 0.05;
+            const actualTime = baseTime * (1 - Math.min(0.9, timeReduction));
+            
+            return Math.max(5.0, actualTime);
+        }
+        
+        function calculateFuelCost(game, fromSystem, toSystem) {
+            const sys1 = game.starSystems[fromSystem];
+            const sys2 = game.starSystems[toSystem];
+            
+            const dx = sys2.position[0] - sys1.position[0];
+            const dy = sys2.position[1] - sys1.position[1];
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            
+            const baseCost = Math.floor(distance * 0.1);
+            const costReduction = game.tech.engines * 0.02;
+            const actualCost = Math.floor(baseCost * (1 - Math.min(0.8, costReduction)));
+            
+            return Math.max(5, actualCost);
+        }
+        
+        // Ship type capabilities
+        function canScan(ship) {
+            return ship.shipType === ShipType.SCOUT || ship.shipType === ShipType.SCIENCE;
+        }
+        
+        function canColonize(ship) {
+            return ship.shipType === ShipType.COLONY;
+        }
+        
+        function isCombatCapable(ship) {
+            return ship.shipType === ShipType.FIGHTER || 
+                   ship.shipType === ShipType.DESTROYER || 
+                   ship.shipType === ShipType.CAPITAL;
+        }
+        
+        function getShipColor(shipType) {
+            const colors = {
+                [ShipType.SCOUT]: '#00ffff',
+                [ShipType.FIGHTER]: '#ff3232',
+                [ShipType.DESTROYER]: '#ff3232',
+                [ShipType.CAPITAL]: '#ff3232',
+                [ShipType.COLONY]: '#ffff00',
+                [ShipType.SCIENCE]: '#9664ff',
+                [ShipType.CARGO]: '#ff9600',
+                [ShipType.MINER]: '#b47832'
+            };
+            return colors[shipType] || '#ffffff';
+        }
+        
+        function getShipIcon(shipType) {
+            const icons = {
+                [ShipType.SCOUT]: '◊',
+                [ShipType.FIGHTER]: '▲',
+                [ShipType.DESTROYER]: '◆',
+                [ShipType.CAPITAL]: '★',
+                [ShipType.COLONY]: '●',
+                [ShipType.SCIENCE]: '◯',
+                [ShipType.CARGO]: '■',
+                [ShipType.MINER]: '⬟'
+            };
+            return icons[shipType] || '●';
+        }
+        
+        function getPlanetColor(planet) {
+            if (planet.colonized) return '#00ff64';
+            if (planet.visitedByColonyShip) return '#ffc864';
+            if (planet.scanned) return '#96c8ff';
+            return '#646464';
+        }
+        
+        function getPlanetIcon(planet) {
+            if (planet.colonized) return '◉';
+            if (planet.visitedByColonyShip) return '◎';
+            if (planet.scanned) return '○';
+            return '●';
+        }
+
+        // ==================== RENDERING ====================
+        
+        class GameRenderer {
+            constructor(canvas, game) {
+                this.canvas = canvas;
+                this.ctx = canvas.getContext('2d');
+                this.game = game;
+                this.cameraOffset = [0, 0];
+                this.pulse = 0;
+                
+                this.resizeCanvas();
+                window.addEventListener('resize', () => this.resizeCanvas());
+            }
+            
+            resizeCanvas() {
+                const container = this.canvas.parentElement;
+                this.canvas.width = container.clientWidth;
+                this.canvas.height = container.clientHeight;
+            }
+            
+            worldToScreen(worldPos) {
+                return [
+                    worldPos[0] + this.cameraOffset[0],
+                    worldPos[1] + this.cameraOffset[1]
+                ];
+            }
+            
+            update(dt) {
+                this.pulse += dt * 2;
+                if (this.pulse > Math.PI * 2) this.pulse -= Math.PI * 2;
+            }
+            
+            render() {
+                const ctx = this.ctx;
+                const w = this.canvas.width;
+                const h = this.canvas.height;
+                
+                // Clear
+                ctx.fillStyle = '#0a1428';
+                ctx.fillRect(0, 0, w, h);
+                
+                // Draw stars
+                this.drawStars();
+                
+                // Draw central star
+                this.drawStar();
+                
+                // Draw orbits and planets
+                this.drawOrbitsAndPlanets();
+                
+                // Draw ships
+                this.drawShips();
+                
+                // Draw enemies
+                this.drawEnemies();
+            }
+            
+            drawStars() {
+                const ctx = this.ctx;
+                for (let i = 0; i < 100; i++) {
+                    const x = (i * 97) % this.canvas.width;
+                    const y = (i * 137) % this.canvas.height;
+                    const brightness = 100 + Math.floor(50 * Math.sin(this.pulse + i));
+                    ctx.fillStyle = `rgb(${brightness}, ${brightness}, ${brightness})`;
+                    ctx.fillRect(x, y, 1, 1);
+                }
+            }
+            
+            drawStar() {
+                const ctx = this.ctx;
+                const system = this.game.starSystems[this.game.currentSystem];
+                const starPos = this.worldToScreen([400, 400]);
+                const glowSize = 35 + Math.floor(5 * Math.sin(this.pulse));
+                
+                // Glow
+                const gradient = ctx.createRadialGradient(starPos[0], starPos[1], 0, starPos[0], starPos[1], glowSize * 3);
+                gradient.addColorStop(0, 'rgba(255, 255, 200, 0.3)');
+                gradient.addColorStop(1, 'rgba(255, 255, 200, 0)');
+                ctx.fillStyle = gradient;
+                ctx.beginPath();
+                ctx.arc(starPos[0], starPos[1], glowSize * 3, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Star
+                ctx.fillStyle = 'rgb(255, 255, 200)';
+                ctx.beginPath();
+                ctx.arc(starPos[0], starPos[1], 30, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.strokeStyle = 'white';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+            }
+            
+            drawOrbitsAndPlanets() {
+                const ctx = this.ctx;
+                const system = this.game.starSystems[this.game.currentSystem];
+                const starPos = this.worldToScreen([400, 400]);
+                
+                // Draw orbits
+                system.planets.forEach(planetId => {
+                    const planet = this.game.planets[planetId];
+                    const dx = planet.position[0] - 400;
+                    const dy = planet.position[1] - 400;
+                    const orbitRadius = Math.sqrt(dx * dx + dy * dy);
+                    
+                    ctx.strokeStyle = 'rgba(96, 128, 160, 0.3)';
+                    ctx.lineWidth = 1;
+                    ctx.beginPath();
+                    ctx.arc(starPos[0], starPos[1], orbitRadius, 0, Math.PI * 2);
+                    ctx.stroke();
+                });
+                
+                // Draw planets
+                system.planets.forEach(planetId => {
+                    const planet = this.game.planets[planetId];
+                    const planetPos = this.worldToScreen(planet.position);
+                    const color = getPlanetColor(planet);
+                    
+                    // Glow for special planets
+                    if (planet.colonized || planet.visitedByColonyShip) {
+                        const gradient = ctx.createRadialGradient(
+                            planetPos[0], planetPos[1], 0,
+                            planetPos[0], planetPos[1], planet.radius + 15
+                        );
+                        gradient.addColorStop(0, color + '40');
+                        gradient.addColorStop(1, color + '00');
+                        ctx.fillStyle = gradient;
+                        ctx.beginPath();
+                        ctx.arc(planetPos[0], planetPos[1], planet.radius + 15, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+                    
+                    // Planet
+                    ctx.fillStyle = color;
+                    ctx.beginPath();
+                    ctx.arc(planetPos[0], planetPos[1], planet.radius, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.strokeStyle = 'white';
+                    ctx.lineWidth = 2;
+                    ctx.stroke();
+                    
+                    // Icon
+                    ctx.fillStyle = 'white';
+                    ctx.font = '20px Arial';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText(getPlanetIcon(planet), planetPos[0], planetPos[1] - planet.radius - 20);
+                    
+                    // Name for scanned/colonized
+                    if (planet.scanned || planet.colonized) {
+                        ctx.font = '14px Arial';
+                        ctx.fillStyle = '#c8e6ff';
+                        ctx.fillText(planet.name, planetPos[0], planetPos[1] - planet.radius - 40);
+                    }
+                    
+                    // System scanning indicator
+                    if (planet.scanningForSystems) {
+                        ctx.font = '18px Arial';
+                        ctx.fillStyle = '#ffc800';
+                        ctx.fillText('📡', planetPos[0] + planet.radius + 10, planetPos[1] - planet.radius);
+                        
+                        // Progress arc
+                        ctx.strokeStyle = '#ffc800';
+                        ctx.lineWidth = 3;
+                        ctx.beginPath();
+                        ctx.arc(planetPos[0], planetPos[1], planet.radius + 8, 0, Math.PI * 2 * planet.systemScanProgress);
+                        ctx.stroke();
+                    }
+                });
+            }
+            
+            drawShips() {
+                const ctx = this.ctx;
+                
+                Object.values(this.game.ships).forEach(ship => {
+                    if (ship.system === this.game.currentSystem && ship.targetSystem === null) {
+                        const shipPos = this.worldToScreen(ship.position);
+                        const color = getShipColor(ship.shipType);
+                        
+                        // Glow
+                        const gradient = ctx.createRadialGradient(
+                            shipPos[0], shipPos[1], 0,
+                            shipPos[0], shipPos[1], 25
+                        );
+                        gradient.addColorStop(0, color + '60');
+                        gradient.addColorStop(1, color + '00');
+                        ctx.fillStyle = gradient;
+                        ctx.beginPath();
+                        ctx.arc(shipPos[0], shipPos[1], 25, 0, Math.PI * 2);
+                        ctx.fill();
+                        
+                        // Ship icon
+                        ctx.fillStyle = color;
+                        ctx.font = 'bold 32px Arial';
+                        ctx.textAlign = 'center';
+                        ctx.textBaseline = 'middle';
+                        ctx.fillText(getShipIcon(ship.shipType), shipPos[0], shipPos[1]);
+                        
+                        // Health bar
+                        if (ship.health < ship.maxHealth) {
+                            const healthRatio = ship.health / ship.maxHealth;
+                            ctx.fillStyle = '#282828';
+                            ctx.fillRect(shipPos[0] - 20, shipPos[1] - 40, 40, 6);
+                            ctx.fillStyle = '#00ff64';
+                            ctx.fillRect(shipPos[0] - 20, shipPos[1] - 40, 40 * healthRatio, 6);
+                            ctx.strokeStyle = 'white';
+                            ctx.lineWidth = 2;
+                            ctx.strokeRect(shipPos[0] - 20, shipPos[1] - 40, 40, 6);
+                        }
+                        
+                        // Action indicator
+                        if (ship.scanningTarget) {
+                            ctx.font = '16px Arial';
+                            ctx.fillText('📡', shipPos[0], shipPos[1] + 25);
+                            
+                            // Progress bar
+                            ctx.fillStyle = '#282828';
+                            ctx.fillRect(shipPos[0] - 20, shipPos[1] + 40, 40, 5);
+                            ctx.fillStyle = '#9664ff';
+                            ctx.fillRect(shipPos[0] - 20, shipPos[1] + 40, 40 * ship.scanProgress, 5);
+                            ctx.strokeStyle = 'white';
+                            ctx.lineWidth = 1;
+                            ctx.strokeRect(shipPos[0] - 20, shipPos[1] + 40, 40, 5);
+                        }
+                        
+                        // Traveling to planet indicator
+                        if (ship.targetPlanet) {
+                            const targetPlanet = this.game.planets[ship.targetPlanet];
+                            if (targetPlanet) {
+                                const targetPos = this.worldToScreen(targetPlanet.position);
+                                ctx.strokeStyle = color;
+                                ctx.lineWidth = 2;
+                                ctx.setLineDash([5, 5]);
+                                ctx.beginPath();
+                                ctx.moveTo(shipPos[0], shipPos[1]);
+                                ctx.lineTo(targetPos[0], targetPos[1]);
+                                ctx.stroke();
+                                ctx.setLineDash([]);
+                            }
+                        }
+                        
+                        // Orbiting indicator
+                        if (ship.orbitingPlanet) {
+                            ctx.font = '14px Arial';
+                            ctx.fillStyle = color;
+                            ctx.fillText('⟳', shipPos[0] - 5, shipPos[1] + 30);
+                        }
+                    }
+                });
+            }
+            
+            drawEnemies() {
+                const ctx = this.ctx;
+                
+                Object.values(this.game.enemies).forEach(enemy => {
+                    if (enemy.system === this.game.currentSystem) {
+                        const enemyPos = this.worldToScreen(enemy.position);
+                        
+                        ctx.fillStyle = '#ff0064';
+                        ctx.beginPath();
+                        ctx.arc(enemyPos[0], enemyPos[1], 18, 0, Math.PI * 2);
+                        ctx.fill();
+                        ctx.strokeStyle = 'white';
+                        ctx.lineWidth = 3;
+                        ctx.stroke();
+                        
+                        ctx.fillStyle = 'white';
+                        ctx.font = '20px Arial';
+                        ctx.textAlign = 'center';
+                        ctx.textBaseline = 'middle';
+                        ctx.fillText('⚠', enemyPos[0], enemyPos[1]);
+                    }
+                });
+            }
+        }
+
+        // ==================== INPUT HANDLING ====================
+        
+        class InputHandler {
+            constructor(canvas, game, renderer) {
+                this.canvas = canvas;
+                this.game = game;
+                this.renderer = renderer;
+                this.dragging = false;
+                this.dragStart = [0, 0];
+                this.lastCameraOffset = [0, 0];
+                
+                this.setupEvents();
+            }
+            
+            setupEvents() {
+                // Touch/Mouse events for canvas
+                this.canvas.addEventListener('mousedown', (e) => this.handleStart(e));
+                this.canvas.addEventListener('mousemove', (e) => this.handleMove(e));
+                this.canvas.addEventListener('mouseup', (e) => this.handleEnd(e));
+                
+                this.canvas.addEventListener('touchstart', (e) => {
+                    e.preventDefault();
+                    const touch = e.touches[0];
+                    this.handleStart(touch);
+                });
+                this.canvas.addEventListener('touchmove', (e) => {
+                    e.preventDefault();
+                    const touch = e.touches[0];
+                    this.handleMove(touch);
+                });
+                this.canvas.addEventListener('touchend', (e) => {
+                    e.preventDefault();
+                    this.handleEnd(e);
+                });
+            }
+            
+            handleStart(e) {
+                this.dragging = true;
+                this.dragStart = [e.clientX, e.clientY];
+                this.lastCameraOffset = [...this.renderer.cameraOffset];
+                this.clickStart = Date.now();
+                this.clickPos = [e.clientX, e.clientY];
+            }
+            
+            handleMove(e) {
+                if (this.dragging) {
+                    const dx = e.clientX - this.dragStart[0];
+                    const dy = e.clientY - this.dragStart[1];
+                    
+                    this.renderer.cameraOffset[0] = this.lastCameraOffset[0] + dx;
+                    this.renderer.cameraOffset[1] = this.lastCameraOffset[1] + dy;
+                    
+                    // Limit camera movement
+                    const maxOffset = 400;
+                    this.renderer.cameraOffset[0] = Math.max(-maxOffset, Math.min(maxOffset, this.renderer.cameraOffset[0]));
+                    this.renderer.cameraOffset[1] = Math.max(-maxOffset, Math.min(maxOffset, this.renderer.cameraOffset[1]));
+                }
+            }
+            
+            handleEnd(e) {
+                if (this.dragging) {
+                    // Check if this was a click (not a drag)
+                    const clickDuration = Date.now() - this.clickStart;
+                    const dx = Math.abs((e.clientX || this.clickPos[0]) - this.clickPos[0]);
+                    const dy = Math.abs((e.clientY || this.clickPos[1]) - this.clickPos[1]);
+                    const dragDistance = Math.sqrt(dx * dx + dy * dy);
+                    
+                    if (clickDuration < 300 && dragDistance < 10) {
+                        this.handleClick(this.clickPos);
+                    }
+                }
+                
+                this.dragging = false;
+            }
+            
+            handleClick(pos) {
+                const rect = this.canvas.getBoundingClientRect();
+                const x = pos[0] - rect.left;
+                const y = pos[1] - rect.top;
+                
+                // Check ship clicks
+                for (const ship of Object.values(this.game.ships)) {
+                    if (ship.system === this.game.currentSystem && ship.targetSystem === null) {
+                        const shipScreen = this.renderer.worldToScreen(ship.position);
+                        const dist = Math.sqrt((x - shipScreen[0]) ** 2 + (y - shipScreen[1]) ** 2);
+                        if (dist < 30) {
+                            this.game.selectedShipId = ship.id;
+                            this.game.selectedPlanetId = null;
+                            showShipMenu();
+                            return;
+                        }
+                    }
+                }
+                
+                // Check planet clicks
+                const system = this.game.starSystems[this.game.currentSystem];
+                for (const planetId of system.planets) {
+                    const planet = this.game.planets[planetId];
+                    const planetScreen = this.renderer.worldToScreen(planet.position);
+                    const dist = Math.sqrt((x - planetScreen[0]) ** 2 + (y - planetScreen[1]) ** 2);
+                    if (dist < planet.radius + 20) {
+                        this.game.selectedPlanetId = planetId;
+                        this.game.selectedShipId = null;
+                        if (planet.scanned || planet.colonized) {
+                            showPlanetMenu();
+                        }
+                        return;
+                    }
+                }
+            }
+        }
+
+        // ==================== UI FUNCTIONS ====================
+        
+        function updateUI(game) {
+            document.getElementById('resources').textContent = Math.floor(game.resources);
+            document.getElementById('deuterium').textContent = Math.floor(game.deuterium);
+            document.getElementById('shipCount').textContent = Object.keys(game.ships).length;
+            
+            const system = game.starSystems[game.currentSystem];
+            document.getElementById('systemName').textContent = system.name;
+            
+            if (game.log.length > 0) {
+                document.getElementById('logDisplay').textContent = game.log[game.log.length - 1];
+            }
+        }
+        
+        function showShipMenu() {
+            const ship = gameState.ships[gameState.selectedShipId];
+            if (!ship) return;
+            
+            document.getElementById('shipIcon').textContent = getShipIcon(ship.shipType);
+            document.getElementById('shipIcon').style.color = getShipColor(ship.shipType);
+            document.getElementById('shipName').textContent = ship.name;
+            document.getElementById('shipType').textContent = ship.shipType;
+            document.getElementById('shipHealth').textContent = `${Math.floor(ship.health)}/${ship.maxHealth}`;
+            document.getElementById('shipHealthBar').style.width = `${(ship.health / ship.maxHealth) * 100}%`;
+            document.getElementById('shipFuel').textContent = `${Math.floor(ship.fuel)}/${ship.maxFuel}`;
+            document.getElementById('shipFuelBar').style.width = `${(ship.fuel / ship.maxFuel) * 100}%`;
+            
+            // Status
+            let statusHTML = '';
+            if (ship.targetSystem) {
+                statusHTML = `<div class="status-text">🚀 Traveling...</div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: ${ship.travelProgress * 100}%; background: #ffc800;"></div>
+                    </div>`;
+            } else if (ship.scanningTarget) {
+                statusHTML = `<div class="status-text">📡 Scanning...</div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: ${ship.scanProgress * 100}%; background: #9664ff;"></div>
+                    </div>`;
+            }
+            document.getElementById('shipStatus').innerHTML = statusHTML;
+            
+            // Actions
+            let actionsHTML = '';
+            
+            if (canScan(ship) && !ship.scanningTarget) {
+                actionsHTML += '<button class="button" onclick="scanPlanetAction()">📡 Scan Planet</button>';
+            }
+            
+            if (!ship.targetSystem && !ship.targetPlanet) {
+                actionsHTML += '<button class="button" onclick="travelToSystemAction()">🚀 Travel to System</button>';
+                actionsHTML += '<button class="button" onclick="travelToPlanetAction()">🛸 Travel to Planet</button>';
+            }
+            
+            if (ship.orbitingPlanet) {
+                actionsHTML += '<button class="button" onclick="leaveOrbitAction()">⬅ Leave Orbit</button>';
+            }
+            
+            if (isCombatCapable(ship) && Object.keys(gameState.enemies).length > 0) {
+                actionsHTML += '<button class="button danger" onclick="engageEnemyAction()">⚔ Attack Enemy</button>';
+            }
+            
+            document.getElementById('shipActions').innerHTML = actionsHTML;
+            
+            document.getElementById('shipModal').classList.add('active');
+        }
+        
+        function showPlanetMenu() {
+            const planet = gameState.planets[gameState.selectedPlanetId];
+            if (!planet) return;
+            
+            document.getElementById('planetIcon').textContent = getPlanetIcon(planet);
+            document.getElementById('planetIcon').style.color = getPlanetColor(planet);
+            document.getElementById('planetModalTitle').textContent = planet.name;
+            
+            // Status
+            let statusText = '';
+            if (planet.colonized) {
+                statusText = '✓ COLONIZED';
+            } else if (planet.visitedByColonyShip) {
+                statusText = '🚀 READY TO COLONIZE';
+            } else if (planet.scanned) {
+                statusText = '📡 SCANNED';
+            } else {
+                statusText = '❓ UNKNOWN';
+            }
+            document.getElementById('planetStatus').textContent = statusText;
+            
+            // Info
+            let infoHTML = '';
+            if (planet.scanned || planet.colonized) {
+                infoHTML = `
+                    <div class="info-row">
+                        <span class="info-label">💰 Resources</span>
+                        <span class="info-value">${planet.resources}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">⚡ Deuterium</span>
+                        <span class="info-value">${planet.deuterium}</span>
+                    </div>
+                `;
+                
+                if (planet.colonized) {
+                    infoHTML += `
+                        <div class="info-row">
+                            <span class="info-label">👥 Population</span>
+                            <span class="info-value">${planet.population.toLocaleString()}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">⛏ Mining Stations</span>
+                            <span class="info-value">${planet.miningStations}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">🛡 Defenses</span>
+                            <span class="info-value">${planet.defenses}</span>
+                        </div>
+                    `;
+                }
+            }
+            document.getElementById('planetInfo').innerHTML = infoHTML;
+            
+            // Actions
+            let actionsHTML = '';
+            
+            if (!planet.colonized && planet.visitedByColonyShip) {
+                actionsHTML += '<button class="button success" onclick="colonizePlanetAction()">🌍 Colonize (500💰)</button>';
+            }
+            
+            if (planet.colonized && !planet.scanningForSystems) {
+                actionsHTML += '<button class="button" onclick="scanForSystemsAction()">🔭 Scan for Systems (100💰)</button>';
+            }
+            
+            if (planet.colonized && planet.resources > 0) {
+                actionsHTML += '<button class="button" onclick="buildMiningStationAction()">⛏ Build Mine (300💰)</button>';
+            }
+            
+            if (planet.colonized) {
+                actionsHTML += '<button class="button" onclick="buildDefensesAction()">🛡 Build Defense (200💰)</button>';
+            }
+            
+            document.getElementById('planetActions').innerHTML = actionsHTML;
+            
+            document.getElementById('planetModal').classList.add('active');
+        }
+        
+        function showGalaxyView() {
+            const modal = document.getElementById('galaxyModal');
+            modal.classList.add('active');
+            
+            const canvas = document.getElementById('galaxyCanvas');
+            const ctx = canvas.getContext('2d');
+            
+            // Clear
+            ctx.fillStyle = '#0a1428';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw systems
+            Object.values(gameState.starSystems).forEach(system => {
+                if (system.discovered) {
+                    const x = system.position[0] * 0.6 + 50;
+                    const y = system.position[1] * 0.7 + 100;
+                    
+                    // Glow
+                    const gradient = ctx.createRadialGradient(x, y, 0, x, y, 35);
+                    gradient.addColorStop(0, 'rgba(255, 255, 200, 0.5)');
+                    gradient.addColorStop(1, 'rgba(255, 255, 200, 0)');
+                    ctx.fillStyle = gradient;
+                    ctx.beginPath();
+                    ctx.arc(x, y, 35, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    // Star
+                    ctx.fillStyle = 'rgb(255, 255, 200)';
+                    ctx.beginPath();
+                    ctx.arc(x, y, 28, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.strokeStyle = 'white';
+                    ctx.lineWidth = 3;
+                    ctx.stroke();
+                    
+                    // Icon
+                    ctx.fillStyle = 'white';
+                    ctx.font = '20px Arial';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText('⭐', x, y);
+                    
+                    // Name
+                    ctx.font = '14px Arial';
+                    ctx.fillStyle = '#c8e6ff';
+                    ctx.fillText(system.name, x, y + 45);
+                    
+                    // Highlight current
+                    if (system.id === gameState.currentSystem) {
+                        ctx.strokeStyle = '#ffc800';
+                        ctx.lineWidth = 4;
+                        ctx.beginPath();
+                        ctx.arc(x, y, 35, 0, Math.PI * 2);
+                        ctx.stroke();
+                    }
+                }
+            });
+            
+            // Add click handler
+            canvas.onclick = (e) => {
+                const rect = canvas.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                
+                Object.values(gameState.starSystems).forEach(system => {
+                    if (system.discovered) {
+                        const sx = system.position[0] * 0.6 + 50;
+                        const sy = system.position[1] * 0.7 + 100;
+                        const dist = Math.sqrt((x - sx) ** 2 + (y - sy) ** 2);
+                        if (dist < 40) {
+                            gameState.currentSystem = system.id;
+                            renderer.cameraOffset = [0, 0];
+                            closeAllModals();
+                        }
+                    }
+                });
+            };
+        }
+        
+        function showTechView() {
+            const modal = document.getElementById('techModal');
+            const techList = document.getElementById('techList');
+            
+            const techIcons = {
+                'weapons': '⚔',
+                'shields': '🛡',
+                'engines': '🚀',
+                'scanners': '📡',
+                'hyperdrive': '⚡',
+                'mining': '⛏',
+                'teleport': '🌀'
+            };
+            
+            let html = '';
+            
+            Object.keys(TechType).forEach(key => {
+                const techName = key.toLowerCase();
+                const currentLevel = gameState.tech[techName];
+                const cost = gameState.getTechCost(techName);
+                const canAfford = gameState.resources >= cost;
+                
+                html += `
+                    <div class="tech-item">
+                        <div style="font-size: 24px; margin-right: 15px;">${techIcons[techName]}</div>
+                        <div class="tech-info">
+                            <div class="tech-name">${TechType[key]}</div>
+                            <div class="tech-level">Lv ${currentLevel}</div>
+                        </div>
+                        <button class="tech-button" ${canAfford ? '' : 'disabled'} 
+                                onclick="upgradeTechAction('${techName}')">
+                            ↑ ${cost}
+                        </button>
+                    </div>
+                `;
+            });
+            
+            techList.innerHTML = html;
+            modal.classList.add('active');
+        }
+        
+        function closeAllModals() {
+            document.querySelectorAll('.modal').forEach(modal => {
+                modal.classList.remove('active');
+            });
+        }
+
+        // ==================== GAME ACTIONS ====================
+        
+        function scanPlanetAction() {
+            const ship = gameState.ships[gameState.selectedShipId];
+            const system = gameState.starSystems[ship.system];
+            const unscanned = system.planets
+                .map(pid => gameState.planets[pid])
+                .filter(p => !p.scanned);
+            
+            if (unscanned.length === 0) {
+                gameState.addLog('📡 All planets scanned');
+                return;
+            }
+            
+            // Find nearest unscanned planet
+            let nearest = unscanned[0];
+            let minDist = Infinity;
+            unscanned.forEach(p => {
+                const dx = p.position[0] - ship.position[0];
+                const dy = p.position[1] - ship.position[1];
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                if (dist < minDist) {
+                    minDist = dist;
+                    nearest = p;
+                }
+            });
+            
+            ship.scanningTarget = nearest.id;
+            ship.scanStartTime = Date.now();
+            ship.scanProgress = 0;
+            gameState.addLog(`📡 Scanning ${nearest.name}`);
+            closeAllModals();
+        }
+        
+        function travelToSystemAction() {
+            const ship = gameState.ships[gameState.selectedShipId];
+            const otherSystems = Object.values(gameState.starSystems)
+                .filter(s => s.discovered && s.id !== ship.system);
+            
+            if (otherSystems.length === 0) {
+                gameState.addLog('❌ No other systems');
+                return;
+            }
+            
+            const targetSystem = otherSystems[0];
+            const travelTime = calculateTravelTime(gameState, ship.system, targetSystem.id);
+            const fuelCost = calculateFuelCost(gameState, ship.system, targetSystem.id);
+            
+            if (ship.fuel < fuelCost) {
+                gameState.addLog(`❌ Need ${fuelCost} fuel`);
+                return;
+            }
+            
+            ship.fuel -= fuelCost;
+            ship.targetSystem = targetSystem.id;
+            ship.travelStartTime = Date.now();
+            ship.travelDuration = travelTime;
+            ship.travelProgress = 0;
+            
+            gameState.addLog(`🚀 Going to ${targetSystem.name}`);
+            closeAllModals();
+        }
+        
+        function travelToPlanetAction() {
+            const ship = gameState.ships[gameState.selectedShipId];
+            const system = gameState.starSystems[ship.system];
+            
+            // Get all scanned planets in current system
+            const scannedPlanets = system.planets
+                .map(pid => gameState.planets[pid])
+                .filter(p => p.scanned || p.colonized);
+            
+            if (scannedPlanets.length === 0) {
+                gameState.addLog('❌ No known planets to travel to');
+                return;
+            }
+            
+            // Show selection (for simplicity, go to first unvisited or first planet)
+            let targetPlanet = scannedPlanets.find(p => !p.visitedByColonyShip && !p.colonized);
+            if (!targetPlanet) {
+                targetPlanet = scannedPlanets[0];
+            }
+            
+            ship.targetPlanet = targetPlanet.id;
+            ship.orbitingPlanet = null;
+            ship.planetTravelProgress = 0;
+            gameState.addLog(`🛸 ${ship.name} traveling to ${targetPlanet.name}`);
+            closeAllModals();
+        }
+        
+        function leaveOrbitAction() {
+            const ship = gameState.ships[gameState.selectedShipId];
+            ship.orbitingPlanet = null;
+            gameState.addLog(`↗ ${ship.name} left orbit`);
+            closeAllModals();
+        }
+        
+        function engageEnemyAction() {
+            const ship = gameState.ships[gameState.selectedShipId];
+            const enemiesHere = Object.values(gameState.enemies)
+                .filter(e => e.system === ship.system);
+            
+            if (enemiesHere.length === 0) {
+                gameState.addLog('❌ No enemies here');
+                return;
+            }
+            
+            const enemy = enemiesHere[0];
+            ship.combatTarget = enemy.id;
+            gameState.addLog(`⚔ Attacking ${enemy.name}!`);
+            closeAllModals();
+        }
+        
+        function colonizePlanetAction() {
+            const planet = gameState.planets[gameState.selectedPlanetId];
+            
+            if (!planet.visitedByColonyShip) {
+                gameState.addLog('❌ Need colony ship to visit first!');
+                return;
+            }
+            
+            if (gameState.resources < 500) {
+                gameState.addLog('❌ Need 500 resources');
+                return;
+            }
+            
+            gameState.resources -= 500;
+            planet.colonized = true;
+            planet.population = 10000;
+            gameState.addLog(`🌍 Colonized ${planet.name}!`);
+            closeAllModals();
+        }
+        
+        function buildMiningStationAction() {
+            const planet = gameState.planets[gameState.selectedPlanetId];
+            
+            if (gameState.resources < 300) {
+                gameState.addLog('❌ Need 300 resources');
+                return;
+            }
+            
+            gameState.resources -= 300;
+            planet.miningStations += 1;
+            gameState.addLog(`⛏ Built mine on ${planet.name}`);
+            showPlanetMenu();
+        }
+        
+        function buildDefensesAction() {
+            const planet = gameState.planets[gameState.selectedPlanetId];
+            
+            if (gameState.resources < 200) {
+                gameState.addLog('❌ Need 200 resources');
+                return;
+            }
+            
+            gameState.resources -= 200;
+            planet.defenses += 10;
+            gameState.addLog('🛡 Built defenses (+10)');
+            showPlanetMenu();
+        }
+        
+        function scanForSystemsAction() {
+            const planet = gameState.planets[gameState.selectedPlanetId];
+            
+            if (gameState.resources < 100) {
+                gameState.addLog('❌ Need 100 resources');
+                return;
+            }
+            
+            // Check if there are undiscovered systems
+            const undiscovered = Object.values(gameState.starSystems).filter(s => !s.discovered);
+            if (undiscovered.length === 0) {
+                gameState.addLog('❌ All systems discovered');
+                return;
+            }
+            
+            gameState.resources -= 100;
+            planet.scanningForSystems = true;
+            planet.systemScanStartTime = Date.now();
+            planet.systemScanProgress = 0;
+            gameState.addLog(`🔭 ${planet.name} scanning for systems...`);
+            closeAllModals();
+        }
+        
+        function upgradeTechAction(techName) {
+            const cost = gameState.getTechCost(techName);
+            
+            if (gameState.resources < cost) {
+                gameState.addLog(`❌ Need ${cost} resources`);
+                return;
+            }
+            
+            gameState.resources -= cost;
+            const currentLevel = gameState.tech[techName];
+            gameState.tech[techName] = currentLevel + 1;
+            
+            const techType = Object.keys(TechType).find(k => k.toLowerCase() === techName);
+            gameState.addLog(`🔬 ${TechType[techType]} Lv${currentLevel + 1}`);
+            
+            showTechView();
+        }
+
+        // ==================== MAIN GAME LOOP ====================
+        
+        let gameState;
+        let renderer;
+        let inputHandler;
+        let lastTime = Date.now();
+        
+        function init() {
+            gameState = new GameState();
+            
+            const canvas = document.getElementById('gameCanvas');
+            renderer = new GameRenderer(canvas, gameState);
+            inputHandler = new InputHandler(canvas, gameState, renderer);
+            
+            // Button events
+            document.getElementById('galaxyBtn').onclick = showGalaxyView;
+            document.getElementById('techBtn').onclick = showTechView;
+            document.getElementById('quitBtn').onclick = () => {
+                if (confirm('Quit game?')) {
+                    window.close();
+                }
+            };
+            
+            document.getElementById('closeShipModal').onclick = closeAllModals;
+            document.getElementById('closePlanetModal').onclick = closeAllModals;
+            document.getElementById('closeGalaxyModal').onclick = closeAllModals;
+            document.getElementById('closeTechModal').onclick = closeAllModals;
+            
+            gameLoop();
+        }
+        
+        function gameLoop() {
+            const currentTime = Date.now();
+            const dt = (currentTime - lastTime) / 1000;
+            lastTime = currentTime;
+            
+            updateGameState(gameState, dt);
+            renderer.update(dt);
+            renderer.render();
+            updateUI(gameState);
+            
+            requestAnimationFrame(gameLoop);
+        }
+        
+        // Start game when loaded
+        window.addEventListener('load', init);
+    </script>
+</body>
+</html>
