@@ -463,6 +463,7 @@
                 this.currentSystem = 'sys_0';
                 this.selectedShipId = null;
                 this.selectedPlanetId = null;
+                this.selectionMode = null; // null, 'planet', 'system'
                 
                 this.log = [];
                 this.lastUpdateTime = Date.now();
@@ -890,6 +891,9 @@
                 
                 // Draw enemies
                 this.drawEnemies();
+                
+                // Draw selection mode overlay
+                this.drawSelectionMode();
             }
             
             drawStars() {
@@ -1109,6 +1113,53 @@
                     }
                 });
             }
+            
+            drawSelectionMode() {
+                if (!this.game.selectionMode) return;
+                
+                const ctx = this.ctx;
+                const w = this.canvas.width;
+                const h = this.canvas.height;
+                
+                // Semi-transparent overlay
+                ctx.fillStyle = 'rgba(0, 200, 255, 0.1)';
+                ctx.fillRect(0, 0, w, h);
+                
+                // Instruction text
+                const message = this.game.selectionMode === 'planet' 
+                    ? '🛸 Click on a planet to travel to'
+                    : '🚀 Open Galaxy View to select system';
+                
+                ctx.fillStyle = 'rgba(0, 200, 255, 0.9)';
+                ctx.fillRect(10, 10, w - 20, 50);
+                ctx.strokeStyle = '#00c8ff';
+                ctx.lineWidth = 3;
+                ctx.strokeRect(10, 10, w - 20, 50);
+                
+                ctx.fillStyle = 'white';
+                ctx.font = 'bold 18px Arial';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(message, w / 2, 35);
+                
+                // Highlight selectable items
+                if (this.game.selectionMode === 'planet') {
+                    const system = this.game.starSystems[this.game.currentSystem];
+                    system.planets.forEach(planetId => {
+                        const planet = this.game.planets[planetId];
+                        if (planet.scanned || planet.colonized) {
+                            const planetPos = this.worldToScreen(planet.position);
+                            ctx.strokeStyle = '#00ffff';
+                            ctx.lineWidth = 3;
+                            ctx.setLineDash([5, 5]);
+                            ctx.beginPath();
+                            ctx.arc(planetPos[0], planetPos[1], planet.radius + 10, 0, Math.PI * 2);
+                            ctx.stroke();
+                            ctx.setLineDash([]);
+                        }
+                    });
+                }
+            }
         }
 
         // ==================== INPUT HANDLING ====================
@@ -1191,7 +1242,29 @@
                 const x = pos[0] - rect.left;
                 const y = pos[1] - rect.top;
                 
-                // Check ship clicks
+                // Handle selection mode
+                if (this.game.selectionMode === 'planet') {
+                    const system = this.game.starSystems[this.game.currentSystem];
+                    for (const planetId of system.planets) {
+                        const planet = this.game.planets[planetId];
+                        if (planet.scanned || planet.colonized) {
+                            const planetScreen = this.renderer.worldToScreen(planet.position);
+                            const dist = Math.sqrt((x - planetScreen[0]) ** 2 + (y - planetScreen[1]) ** 2);
+                            if (dist < planet.radius + 20) {
+                                // Deploy ship to this planet
+                                deployShipToPlanet(planet.id);
+                                this.game.selectionMode = null;
+                                return;
+                            }
+                        }
+                    }
+                    // Clicked elsewhere - cancel selection
+                    this.game.selectionMode = null;
+                    this.game.addLog('❌ Travel cancelled');
+                    return;
+                }
+                
+                // Normal mode - Check ship clicks
                 for (const ship of Object.values(this.game.ships)) {
                     if (ship.system === this.game.currentSystem && ship.targetSystem === null) {
                         const shipScreen = this.renderer.worldToScreen(ship.position);
@@ -1199,6 +1272,7 @@
                         if (dist < 30) {
                             this.game.selectedShipId = ship.id;
                             this.game.selectedPlanetId = null;
+                            this.game.selectionMode = null;
                             showShipMenu();
                             return;
                         }
@@ -1214,6 +1288,7 @@
                     if (dist < planet.radius + 20) {
                         this.game.selectedPlanetId = planetId;
                         this.game.selectedShipId = null;
+                        this.game.selectionMode = null;
                         if (planet.scanned || planet.colonized) {
                             showPlanetMenu();
                         }
@@ -1380,6 +1455,21 @@
             ctx.fillStyle = '#0a1428';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
             
+            // Selection mode instruction
+            if (gameState.selectionMode === 'system') {
+                ctx.fillStyle = 'rgba(0, 200, 255, 0.9)';
+                ctx.fillRect(10, 10, canvas.width - 20, 50);
+                ctx.strokeStyle = '#00c8ff';
+                ctx.lineWidth = 3;
+                ctx.strokeRect(10, 10, canvas.width - 20, 50);
+                
+                ctx.fillStyle = 'white';
+                ctx.font = 'bold 18px Arial';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText('🚀 Click on a system to travel to', canvas.width / 2, 35);
+            }
+            
             // Draw systems
             Object.values(gameState.starSystems).forEach(system => {
                 if (system.discovered) {
@@ -1424,6 +1514,17 @@
                         ctx.arc(x, y, 35, 0, Math.PI * 2);
                         ctx.stroke();
                     }
+                    
+                    // Highlight selectable systems in selection mode
+                    if (gameState.selectionMode === 'system' && system.id !== gameState.currentSystem) {
+                        ctx.strokeStyle = '#00ffff';
+                        ctx.lineWidth = 3;
+                        ctx.setLineDash([5, 5]);
+                        ctx.beginPath();
+                        ctx.arc(x, y, 42, 0, Math.PI * 2);
+                        ctx.stroke();
+                        ctx.setLineDash([]);
+                    }
                 }
             });
             
@@ -1433,6 +1534,25 @@
                 const x = e.clientX - rect.left;
                 const y = e.clientY - rect.top;
                 
+                // Handle system selection mode
+                if (gameState.selectionMode === 'system') {
+                    Object.values(gameState.starSystems).forEach(system => {
+                        if (system.discovered && system.id !== gameState.currentSystem) {
+                            const sx = system.position[0] * 0.6 + 50;
+                            const sy = system.position[1] * 0.7 + 100;
+                            const dist = Math.sqrt((x - sx) ** 2 + (y - sy) ** 2);
+                            if (dist < 40) {
+                                // Deploy ship to this system
+                                deployShipToSystem(system.id);
+                                gameState.selectionMode = null;
+                                closeAllModals();
+                            }
+                        }
+                    });
+                    return;
+                }
+                
+                // Normal mode - navigate to system
                 Object.values(gameState.starSystems).forEach(system => {
                     if (system.discovered) {
                         const sx = system.position[0] * 0.6 + 50;
@@ -1441,6 +1561,7 @@
                         if (dist < 40) {
                             gameState.currentSystem = system.id;
                             renderer.cameraOffset = [0, 0];
+                            gameState.selectionMode = null;
                             closeAllModals();
                         }
                     }
@@ -1494,6 +1615,44 @@
                 modal.classList.remove('active');
             });
         }
+        
+        // Helper functions for deploying ships
+        function deployShipToPlanet(planetId) {
+            const ship = gameState.ships[gameState.selectedShipId];
+            if (!ship) return;
+            
+            const targetPlanet = gameState.planets[planetId];
+            if (!targetPlanet) return;
+            
+            ship.targetPlanet = targetPlanet.id;
+            ship.orbitingPlanet = null;
+            ship.planetTravelProgress = 0;
+            gameState.addLog(`🛸 ${ship.name} traveling to ${targetPlanet.name}`);
+        }
+        
+        function deployShipToSystem(systemId) {
+            const ship = gameState.ships[gameState.selectedShipId];
+            if (!ship) return;
+            
+            const targetSystem = gameState.starSystems[systemId];
+            if (!targetSystem) return;
+            
+            const travelTime = calculateTravelTime(gameState, ship.system, targetSystem.id);
+            const fuelCost = calculateFuelCost(gameState, ship.system, targetSystem.id);
+            
+            if (ship.fuel < fuelCost) {
+                gameState.addLog(`❌ Need ${fuelCost} fuel`);
+                return;
+            }
+            
+            ship.fuel -= fuelCost;
+            ship.targetSystem = targetSystem.id;
+            ship.travelStartTime = Date.now();
+            ship.travelDuration = travelTime;
+            ship.travelProgress = 0;
+            
+            gameState.addLog(`🚀 ${ship.name} traveling to ${targetSystem.name}`);
+        }
 
         // ==================== GAME ACTIONS ====================
         
@@ -1535,27 +1694,16 @@
                 .filter(s => s.discovered && s.id !== ship.system);
             
             if (otherSystems.length === 0) {
-                gameState.addLog('❌ No other systems');
+                gameState.addLog('❌ No other systems discovered');
                 return;
             }
             
-            const targetSystem = otherSystems[0];
-            const travelTime = calculateTravelTime(gameState, ship.system, targetSystem.id);
-            const fuelCost = calculateFuelCost(gameState, ship.system, targetSystem.id);
-            
-            if (ship.fuel < fuelCost) {
-                gameState.addLog(`❌ Need ${fuelCost} fuel`);
-                return;
-            }
-            
-            ship.fuel -= fuelCost;
-            ship.targetSystem = targetSystem.id;
-            ship.travelStartTime = Date.now();
-            ship.travelDuration = travelTime;
-            ship.travelProgress = 0;
-            
-            gameState.addLog(`🚀 Going to ${targetSystem.name}`);
+            // Enter system selection mode
+            gameState.selectionMode = 'system';
+            gameState.addLog('🚀 Open Galaxy View and click a system');
             closeAllModals();
+            // Auto-open galaxy view
+            setTimeout(() => showGalaxyView(), 100);
         }
         
         function travelToPlanetAction() {
@@ -1572,16 +1720,9 @@
                 return;
             }
             
-            // Show selection (for simplicity, go to first unvisited or first planet)
-            let targetPlanet = scannedPlanets.find(p => !p.visitedByColonyShip && !p.colonized);
-            if (!targetPlanet) {
-                targetPlanet = scannedPlanets[0];
-            }
-            
-            ship.targetPlanet = targetPlanet.id;
-            ship.orbitingPlanet = null;
-            ship.planetTravelProgress = 0;
-            gameState.addLog(`🛸 ${ship.name} traveling to ${targetPlanet.name}`);
+            // Enter planet selection mode
+            gameState.selectionMode = 'planet';
+            gameState.addLog('🛸 Click on a planet to travel to');
             closeAllModals();
         }
         
